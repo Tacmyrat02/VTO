@@ -28,5 +28,22 @@ def login_view(request):
         form = AuthenticationForm()  # Indent edilen blok
     return render(request, 'accounts/login.html', {'form': form})  # Funksiýanyň dowamy
 
-def profile(request):
-    return render(request, 'accounts/profile.html')
+dfrom django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from .models import User
+from .forms import UserChangeForm
+
+@login_required
+def profile_view(request):
+    if request.method == 'POST':
+        form = UserChangeForm(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            form.save()
+            return redirect('tryon:home')
+    else:
+        form = UserChangeForm(instance=request.user)
+    
+    return render(request, 'accounts/profile.html', {
+        'form': form,
+        'body_data': request.user.get_body_data()
+    })

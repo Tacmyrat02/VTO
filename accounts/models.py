@@ -1,47 +1,60 @@
-from django.contrib.auth.models import AbstractUser
-from django.db import models
-
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.db import models
-import json
+from django.core.validators import MinValueValidator
 
 class User(AbstractUser):
-    # Profile fields
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    body_measurements = models.JSONField(
-        default=dict,
+    # Profile Image
+    avatar = models.ImageField(
+        upload_to='user_avatars/',
+        null=True,
         blank=True,
-        help_text="JSON of user's body measurements (height, shoulder, waist, etc.)"
+        help_text="Upload a clear front-facing photo for better virtual try-on results"
     )
     
-    # Fix auth model clashes
+    # Body Measurements (in cm)
+    height = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(100)],
+        help_text="Height in centimeters"
+    )
+    shoulder_width = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(30)],
+        help_text="Shoulder width in centimeters"
+    )
+    waist = models.FloatField(
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(50)],
+        help_text="Waist circumference in centimeters"
+    )
+    
+    # Fix auth model conflicts
     groups = models.ManyToManyField(
         Group,
-        verbose_name='groups',
+        related_name="vto_users",
+        related_query_name="vto_user",
         blank=True,
-        related_name="vto_user_groups",  # Unique related_name
-        related_query_name="user",
+        verbose_name='groups'
     )
     user_permissions = models.ManyToManyField(
         Permission,
-        verbose_name='user permissions',
+        related_name="vto_users",
+        related_query_name="vto_user",
         blank=True,
-        related_name="vto_user_permissions",  # Unique related_name
-        related_query_name="user",
+        verbose_name='user permissions'
     )
 
-    def __str__(self):
-        return f"{self.username} (VTO User)"
-class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
-    height = models.FloatField(help_text="Height in cm") 
-    shoulder_width = models.FloatField(help_text="Shoulder width in cm")
-    waist = models.FloatField(help_text="Waist in cm")
-    # Add other measurements as needed
-
-    def get_measurements_json(self):
-        return json.dumps({
+    def get_body_data(self):
+        """Returns measurements as dict for AR processing"""
+        return {
             'height': self.height,
             'shoulder': self.shoulder_width,
-            'waist': self.waist
-        })
+            'waist': self.waist,
+            'gender': 'male'  # Can be made into a model field
+        }
+
+    def __str__(self):
+        return f"{self.username} ({self.email})"
