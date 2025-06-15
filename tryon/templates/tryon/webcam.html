@@ -1,0 +1,145 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">Virtual Try-On with Webcam</h2>
+    
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    Live Camera Feed
+                </div>
+                <div class="card-body">
+                    <div id="webcam-container" class="mb-3">
+                        <video id="webcam" autoplay playsinline class="img-fluid rounded"></video>
+                        <canvas id="canvas" style="display:none;"></canvas>
+                    </div>
+                    <button id="capture-btn" class="btn btn-primary">
+                        <i class="fas fa-camera"></i> Capture Image
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    Virtual Try-On Result
+                </div>
+                <div class="card-body">
+                    <div id="result-container" style="display:none;">
+                        <img id="result-image" class="img-fluid rounded" alt="Virtual Try-On Result">
+                    </div>
+                    <div id="loading-spinner" class="text-center" style="display:none;">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p>Processing your image...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4">
+        <a href="{% url 'upload_tryon' %}" class="btn btn-secondary">
+            <i class="fas fa-upload"></i> Or Upload Image Instead
+        </a>
+    </div>
+</div>
+
+<!-- Add this if you're using Font Awesome for icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const captureBtn = document.getElementById('capture-btn');
+    const resultContainer = document.getElementById('result-container');
+    const resultImage = document.getElementById('result-image');
+    const loadingSpinner = document.getElementById('loading-spinner');
+    const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // Access webcam
+    if (navigator.mediaDevices.getUserMedia) {
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                video.srcObject = stream;
+            })
+            .catch(function(error) {
+                console.error("Webcam error: ", error);
+                alert("Could not access webcam. Please check permissions.");
+            });
+    }
+
+    // Capture image
+    captureBtn.addEventListener('click', function() {
+        // Show loading spinner
+        resultContainer.style.display = 'none';
+        loadingSpinner.style.display = 'block';
+        
+        // Set canvas dimensions to match video
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Draw current video frame to canvas
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convert canvas to base64 image
+        const imageData = canvas.toDataURL('image/jpeg');
+        
+        // Send to server for processing
+        fetch("{% url 'webcam_tryon' %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                image: imageData
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Display processed image
+                resultImage.src = data.processed_image || imageData;
+                if (data.landmarks) {
+                    console.log("Body landmarks:", data.landmarks);
+                }
+                resultContainer.style.display = 'block';
+            } else {
+                alert("Error: " + (data.message || "Unknown error occurred"));
+            }
+            loadingSpinner.style.display = 'none';
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("An error occurred while processing your image.");
+            loadingSpinner.style.display = 'none';
+        });
+    });
+});
+</script>
+
+<style>
+#webcam {
+    background-color: #f0f0f0;
+    border: 2px solid #ddd;
+    max-width: 100%;
+}
+#result-image {
+    border: 2px solid #4CAF50;
+}
+.card {
+    margin-bottom: 20px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.btn {
+    margin-top: 10px;
+}
+</style>
+{% endblock %}
