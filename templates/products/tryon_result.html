@@ -1,0 +1,12 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Netije: {{ product.name }}</h2>
+<div class="result-container">
+    <img src="data:image/jpeg;base64,{{ processed_image }}" alt="Virtual Try-On Result">
+    <div class="recommendation">
+        <h3>Siziň ölçegiňiz: {{ size_recommendation }}</h3>
+        <p>Bu önüm size laýyk gelýär!</p>
+    </div>
+</div>
+{% endblock %}
