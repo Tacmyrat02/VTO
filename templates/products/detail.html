@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="product-detail">
+    <h2>{{ product.name }}</h2>
+    <img src="{{ product.image.url }}" alt="{{ product.name }}" class="product-image">
+    <p>{{ product.description }}</p>
+    <p>Bahasy: {{ product.price }} TMT</p>
+    
+    <!-- Virtual Try-On düwmesi -->
+    <button id="try-on-btn" class="btn btn-primary">Synap Gör</button>
+    
+    <!-- Surat ýükleme formy (gizlin) -->
+    <form id="try-on-form" method="post" enctype="multipart/form-data" style="display:none;">
+        {% csrf_token %}
+        <input type="file" name="user_image" accept="image/*" required>
+        <button type="submit" class="btn btn-success">Surat ýükle</button>
+    </form>
+
+    <!-- Netije görkezilýän ýer -->
+    <div id="try-on-result" style="margin-top:20px;"></div>
+</div>
+
+<script>
+document.getElementById('try-on-btn').addEventListener('click', function() {
+    document.getElementById('try-on-form').style.display = 'block';
+});
+
+document.getElementById('try-on-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    
+    fetch("{% url 'virtual_tryon' product.id %}", {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            const resultDiv = document.getElementById('try-on-result');
+            resultDiv.innerHTML = `<img src="${data.result_image}" class="try-on-result-image">`;
+        }
+    });
+});
+</script>
+{% endblock %}

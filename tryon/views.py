@@ -13,7 +13,9 @@ mp_selfie_segmentation = mp.solutions.selfie_segmentation
 def tryon_home(request):
     """Virtual Try-On home page view"""
     return render(request, 'tryon/home.html')
-
+def product_detail(request, pk):
+    product = get_object_or_404(Product, pk=pk)
+    return render(request, 'products/detail.html', {'product': product})
 @csrf_exempt
 def upload_tryon(request):
     if request.method == 'POST' and request.FILES.get('image'):
